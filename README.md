@@ -145,21 +145,7 @@ npm test
 
 ## Architecture
 
-┌─────────────────────────────────────────────────────┐
-│ AfriKart Payment Service │
-│ │
-│ POST /orders → Fincra /checkout/initiate │
-│ POST /orders/:id/payouts → Fincra /disbursements │
-│ POST /webhooks/fincra → verify → dedup → route │
-│ GET /orders/:id → full operator timeline │
-│ │
-│ ┌─────────────────────────────────────────────┐ │
-│ │ SQLite (WAL mode) │ │
-│ │ orders · payouts · idempotency_keys │ │
-│ │ processed_webhook_events │ │
-│ │ transaction_events · chargebacks │ │
-│ └─────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────┘
+![Architecture diagram](./architecture.png)
 
 ### Identifier linkage
 
