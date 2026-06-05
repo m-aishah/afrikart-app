@@ -4,20 +4,35 @@
 **Track:** Product Engineer  
 **Candidate:** Aishah Mabayoje
 
-A backend payment service built on top of the Fincra sandbox API. It handles the full collection-to-payout lifecycle for AfriKart — an African commerce platform — including webhook processing, idempotency, operator traceability, and failure recovery.
+A backend payment service built on top of the Fincra sandbox API that handles the full collection-to-payout lifecycle for AfriKart, a fictional African commerce platform. It covers webhook processing, idempotency, operator traceability, and failure recovery.
+
+---
+
+## Submission Checklist
+
+| Requirement                                                 | Status | Notes                                                                                                                 |
+| ----------------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------- |
+| Runnable from clean checkout                                | ✅     | [Setup instructions](#running-the-service)                                                                            |
+| API base URL and credentials configurable                   | ✅     | [Environment variables](#environment-variables), never hardcoded                                                      |
+| Role and seniority stated                                   | ✅     | Senior Product Engineer                                                                                               |
+| Collection-to-payout happy path                             | ✅     | [Demo script](#demo-script)                                                                                           |
+| Duplicate webhook handling                                  | ✅     | [Failure handling](#failure-handling), `INSERT OR IGNORE` on `processed_webhook_events`                               |
+| Payout failure handling                                     | ✅     | [Failure handling](#failure-handling), async failure + recovery note                                                  |
+| Webhook signature validation                                | ✅     | [`src/lib/webhook-verify.ts`](src/lib/webhook-verify.ts)                                                              |
+| Double-submit prevention                                    | ✅     | [`src/services/payout.service.ts`](src/services/payout.service.ts), two-layer idempotency                             |
+| Tests matching risk                                         | ✅     | [`tests/payment.test.ts`](tests/payment.test.ts) · [`tests/integration.test.ts`](tests/integration.test.ts), 29 tests |
+| README covers data model, idempotency, retries, limitations | ✅     | [Data model](#data-model) · [Decision notes](#decision-notes) · [Known limitations](#known-limitations)               |
+| Two decision notes with trade-offs                          | ✅     | [Decision notes](#decision-notes)                                                                                     |
+| Demo script                                                 | ✅     | [Demo script](#demo-script)                                                                                           |
+| One-command start                                           | ✅     | [Docker](#option-2-docker) · [Local](#option-1-local-recommended)                                                     |
 
 ---
 
 ## What This Service Does
 
-AfriKart needs to:
+AfriKart needs to collect payments from customers, get async confirmation from Fincra via webhooks, pay vendors their share of the money, and give operations teams a clear picture of what happened to any transaction.
 
-1. Collect payments from customers
-2. Receive async confirmation from Fincra via webhooks
-3. Pay vendors their share of the money
-4. Give operations teams a clear picture of what happened to any transaction
-
-This service handles all of that. It sits between AfriKart's business logic and the Fincra API, managing state, preventing duplicate processing, and maintaining a full audit trail.
+This service handles all of that. It sits between AfriKart's business logic and the Fincra API, managing state, preventing duplicate processing, and keeping a full audit trail.
 
 ---
 
@@ -37,9 +52,9 @@ This service handles all of that. It sits between AfriKart's business logic and 
 
 ## Running the Service
 
-### Option 1 — Local (recommended)
+### Option 1 - Local (recommended)
 
-**Terminal 1 — Start the Fincra sandbox:**
+**Terminal 1 - Start the Fincra sandbox:**
 
 ```bash
 cd afrikart-sandbox
@@ -49,7 +64,7 @@ WEBHOOK_TARGET_URL=http://localhost:3001/webhooks/fincra bun run start
 
 Sandbox runs on `http://localhost:4000`.
 
-**Terminal 2 — Start our service:**
+**Terminal 2 - Start our service:**
 
 ```bash
 cp .env.example .env
@@ -68,9 +83,9 @@ curl http://localhost:3001/health
 
 ---
 
-### Option 2 — Docker (our service only)
+### Option 2 - Docker
 
-The sandbox must be running separately and accessible. Then:
+The sandbox needs to be running separately. Then:
 
 ```bash
 FINCRA_API_BASE_URL=http://your-sandbox-url docker compose up --build
@@ -80,13 +95,16 @@ Service runs on `http://localhost:3000`.
 
 ---
 
-### Option 3 — Hosted judging sandbox
+### Option 3 - Hosted judging sandbox
 
-Point the service at the hosted sandbox URL by updating `.env`:
+Update `.env` with the credentials provided:
+
+```bash
 FINCRA_API_BASE_URL=https://hosted-sandbox-url-from-fincra.com
 FINCRA_SECRET_KEY=your-assigned-key
 FINCRA_PUBLIC_KEY=your-assigned-public-key
 FINCRA_WEBHOOK_SECRET=your-assigned-webhook-secret
+```
 
 Then run:
 
@@ -94,7 +112,7 @@ Then run:
 npm run dev
 ```
 
-No code changes needed — everything is configurable via environment variables.
+No code changes needed. Everything is configurable via environment variables.
 
 ---
 
@@ -102,11 +120,11 @@ No code changes needed — everything is configurable via environment variables.
 
 | Variable                | Required | Default         | Description                                     |
 | ----------------------- | -------- | --------------- | ----------------------------------------------- |
-| `FINCRA_API_BASE_URL`   | **yes**  | —               | Fincra sandbox base URL                         |
-| `FINCRA_SECRET_KEY`     | **yes**  | —               | Fincra secret key (`api-key` header)            |
-| `FINCRA_PUBLIC_KEY`     | **yes**  | —               | Fincra public key (`x-pub-key` header)          |
-| `FINCRA_WEBHOOK_SECRET` | **yes**  | —               | Used to verify `x-fincra-signature` HMAC-SHA512 |
-| `PORT`                  | no       | `3001`          | HTTP port our service listens on                |
+| `FINCRA_API_BASE_URL`   | **yes**  | -               | Fincra sandbox base URL                         |
+| `FINCRA_SECRET_KEY`     | **yes**  | -               | Fincra secret key (`api-key` header)            |
+| `FINCRA_PUBLIC_KEY`     | **yes**  | -               | Fincra public key (`x-pub-key` header)          |
+| `FINCRA_WEBHOOK_SECRET` | **yes**  | -               | Used to verify `x-fincra-signature` HMAC-SHA512 |
+| `PORT`                  | no       | `3001`          | HTTP port the service listens on                |
 | `DATABASE_PATH`         | no       | `./afrikart.db` | SQLite database file path                       |
 | `LOG_LEVEL`             | no       | `info`          | `trace` / `debug` / `info` / `warn` / `error`   |
 | `NODE_ENV`              | no       | `development`   | Environment name                                |
@@ -133,13 +151,13 @@ npm test
 
 ## API Endpoints
 
-| Method | Path                       | Description                                          |
-| ------ | -------------------------- | ---------------------------------------------------- |
-| `GET`  | `/health`                  | Service and database liveness check                  |
-| `POST` | `/orders`                  | Initiate a checkout — creates order and calls Fincra |
-| `GET`  | `/orders/:orderId`         | Full order details + operator timeline               |
-| `POST` | `/orders/:orderId/payouts` | Initiate a vendor payout for a settled order         |
-| `POST` | `/webhooks/fincra`         | Receives all Fincra webhook events                   |
+| Method | Path                       | Description                                         |
+| ------ | -------------------------- | --------------------------------------------------- |
+| `GET`  | `/health`                  | Service and database liveness check                 |
+| `POST` | `/orders`                  | Initiate a checkout, creates order and calls Fincra |
+| `GET`  | `/orders/:orderId`         | Full order details + operator timeline              |
+| `POST` | `/orders/:orderId/payouts` | Initiate a vendor payout for a settled order        |
+| `POST` | `/webhooks/fincra`         | Receives all Fincra webhook events                  |
 
 ---
 
@@ -147,7 +165,7 @@ npm test
 
 ![Architecture diagram](./architecture.png)
 
-### Identifier linkage
+### Identifier Linkage
 
 | Our field              | Fincra field        | Purpose                          |
 | ---------------------- | ------------------- | -------------------------------- |
@@ -159,19 +177,62 @@ npm test
 
 ---
 
+## Data Model
+
+Six tables in SQLite (WAL mode):
+
+| Table                      | Purpose                                                                            |
+| -------------------------- | ---------------------------------------------------------------------------------- |
+| `orders`                   | Core order record. Status: `initiated` to `settled` to `charged_back` or `failed`  |
+| `payouts`                  | Payout per order. Status: `pending` to `submitted` to `successful` or `failed`     |
+| `idempotency_keys`         | Write-once dedup for payout double-submit, keyed on caller-supplied or derived key |
+| `processed_webhook_events` | Write-once dedup for webhook delivery, keyed on Fincra `event.id`                  |
+| `transaction_events`       | Append-only operator timeline. Every state change gets written here                |
+| `chargebacks`              | Chargeback records linked to orders with amount, reason, and deadline              |
+
+Schema: [`src/db/schema.ts`](src/db/schema.ts)
+
+---
+
+## Brief Questions Answered
+
+**Which identifiers connect checkout.reference, payment.id, payout.reference, customerReference, and balance-log references?**
+
+See the [identifier linkage table](#identifier-linkage) in the Architecture section above.
+
+**Where exactly is idempotency enforced?**
+
+- Webhooks: `INSERT OR IGNORE` into `processed_webhook_events` keyed on Fincra's `event.id`
+- Payout creation: `idempotency_keys` table checked before calling Fincra, plus `x-idempotency-key` header passed to Fincra
+- UI double-submit: same `idempotency_keys` lookup, returns cached response with `idempotent: true`
+
+**What happens if collection succeeds but payout fails after the user has left the page?**
+
+The `payout.failed` webhook arrives asynchronously. The handler updates payout status to `failed`, appends a timeline event with a recovery note ("Funds restored by provider. Operator should initiate re-payout or refund."), and the order stays `settled`. Support can see everything at `GET /orders/:id` without touching any logs.
+
+**How does support reconstruct the lifecycle without reading application logs?**
+
+`GET /orders/:id` returns the full `transaction_events` timeline in chronological order. Every state change, webhook receipt, payout submission, failure, and chargeback is there with a timestamp, actor, and structured detail.
+
+**What changes if mobile-money payout arrives next month?**
+
+Only the payout service needs a new recipient type field and routing to a `/disbursements/payouts/mobile` endpoint. The state machine, idempotency layer, webhook dedup, and operator timeline need zero changes since they are recipient-agnostic.
+
+---
+
 ## Failure Handling
 
-| Scenario                                 | How we handle it                                                                           |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------ |
-| Duplicate webhook delivery               | `INSERT OR IGNORE` on `processed_webhook_events` — first delivery wins, duplicates ignored |
-| Payout fails async (account ending in 9) | `payout.failed` webhook updates status, adds recovery note to operator timeline            |
-| Slow payout (account ending in 7)        | Status stays `processing` — no unsafe retry until webhook resolves it                      |
-| Payout state regression                  | Terminal states (`successful`, `failed`) are never overwritten                             |
-| Provider chaos / 503                     | Exponential backoff with jitter, up to 3 retries                                           |
-| Double-submit payout                     | Idempotency key table returns cached response — Fincra never called twice                  |
-| Chargeback                               | Balance impact recorded, order marked `charged_back`, deadline visible in timeline         |
-| FX quote expiry                          | Fincra rejects stale quotes — error surfaced immediately, never silently used              |
-| Account verification failure             | Recipient verified before money moves — payout blocked with clear error                    |
+| Scenario                                 | How it is handled                                                                         |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Duplicate webhook delivery               | `INSERT OR IGNORE` on `processed_webhook_events`, first delivery wins, duplicates ignored |
+| Payout fails async (account ending in 9) | `payout.failed` webhook updates status and adds recovery note to operator timeline        |
+| Slow payout (account ending in 7)        | Status stays `processing`, no unsafe retry until webhook resolves it                      |
+| Payout state regression                  | Terminal states (`successful`, `failed`) are never overwritten                            |
+| Provider chaos / 503                     | Exponential backoff with jitter, up to 3 retries                                          |
+| Double-submit payout                     | Idempotency key table returns cached response, Fincra never called twice                  |
+| Chargeback                               | Balance impact recorded, order marked `charged_back`, deadline visible in timeline        |
+| FX quote expiry                          | Fincra rejects stale quotes, error surfaced immediately, never silently used              |
+| Account verification failure             | Recipient verified before money moves, payout blocked with a clear error                  |
 
 ---
 
@@ -179,15 +240,20 @@ npm test
 
 ### Decision 1: SQLite over in-memory store
 
-The sandbox itself uses an in-memory store. We chose SQLite in WAL mode because the brief specifically asks about surviving process restarts — if our dedup table is in-memory, a restart means replayed webhooks get processed again. SQLite gives us ACID durability with zero infrastructure. Schema is standard SQL — portable to Postgres by swapping the driver.
+The sandbox itself uses an in-memory store. SQLite in WAL mode was chosen because the brief specifically asks about surviving process restarts. If the dedup table is in-memory, a restart means replayed webhooks get processed again. SQLite gives ACID durability with zero infrastructure and the schema is standard SQL, portable to Postgres by just swapping the driver.
 
-**Rejected:** in-memory (loses dedup state on restart), Postgres (adds infrastructure dependency with no benefit at this scale).
+**Rejected options:**
+
+- In-memory: loses dedup state on restart
+- Postgres: adds infrastructure dependency with no real benefit at this scale
 
 ### Decision 2: Two-layer idempotency
 
-We enforce idempotency at two layers: our own `idempotency_keys` table (checked before calling Fincra) and Fincra's `x-idempotency-key` header (protects against crashes mid-call). This means a double-submit from the UI returns a cached response instantly, and if we crash after calling Fincra but before saving locally, the next attempt gets the same Fincra response rather than creating a duplicate payout.
+Idempotency is enforced at two layers. Our own `idempotency_keys` table is checked before calling Fincra, and we also pass `internal_ref` as `x-idempotency-key` to Fincra. This means a double-submit from the UI returns a cached response instantly. If the service crashes after calling Fincra but before saving locally, the next attempt gets the same Fincra response instead of creating a duplicate payout.
 
-**Rejected:** trusting Fincra's idempotency alone (no local record if our DB call fails after a successful Fincra call).
+**Rejected options:**
+
+- Trusting Fincra's idempotency alone: no local record if our DB call fails after a successful Fincra call
 
 ---
 
@@ -201,20 +267,20 @@ curl -s -X POST http://localhost:3001/orders \
   -H 'Content-Type: application/json' \
   -d '{"amount":25000,"customerName":"Ada Lovelace","customerEmail":"ada@example.com"}' | jq .
 
-# 2. Simulate customer paying (on sandbox)
+# 2. Simulate customer paying (run this on the sandbox)
 curl -s -X POST http://localhost:4000/simulate/collections/settle \
   -H 'Content-Type: application/json' \
   -d '{"reference":"<checkout_ref from step 1>"}' | jq .
 
-# 3. Check order settled + timeline
+# 3. Check order is settled and see the timeline
 curl -s http://localhost:3001/orders/<orderId> | jq .
 
-# 4. Pay vendor
+# 4. Pay the vendor
 curl -s -X POST http://localhost:3001/orders/<orderId>/payouts \
   -H 'Content-Type: application/json' \
   -d '{"amount":10000,"recipientName":"Kofi Mensah","recipientAccount":"0001112223","recipientBankCode":"044"}' | jq .
 
-# 5. Check payout.successful in timeline (after ~2s)
+# 5. Check payout.successful in timeline (after about 2 seconds)
 curl -s http://localhost:3001/orders/<orderId> | jq '.data.timeline[-1]'
 ```
 
@@ -223,33 +289,35 @@ curl -s http://localhost:3001/orders/<orderId> | jq '.data.timeline[-1]'
 ```bash
 curl -s -X POST http://localhost:4000/simulate/webhooks/replay/<eventId> \
   -H 'api-key: sk_test_afrikart_secret' | jq .
-# Our service returns duplicate:true — order unchanged
+# Service returns duplicate:true, order unchanged
 ```
 
 ### Async payout failure
 
 ```bash
-# Pay to account ending in 9
+# Pay to an account ending in 9
 curl -s -X POST http://localhost:3001/orders/<orderId>/payouts \
   -H 'Content-Type: application/json' \
   -d '{"amount":5000,"recipientName":"Fatima Invalid","recipientAccount":"0000000009","recipientBankCode":"058"}' | jq .
-# Check timeline after 2s — shows payout.failed with recoveryNote
+
+# Check the timeline after 2 seconds, shows payout.failed with recoveryNote
+curl -s http://localhost:3001/orders/<orderId> | jq '.data.timeline[-1]'
 ```
 
 ---
 
 ## Known Limitations
 
-- No authentication on our API endpoints — a production service would require operator JWT/API keys
-- No job queue for polling unresolved payouts — if a webhook is never delivered, payout stays `submitted` indefinitely
-- SQLite write throughput ceiling — high concurrency would need Postgres with advisory locks
-- No mobile-money rail — adding it requires a new recipient type and endpoint route; state machine and idempotency layer need no changes
-- Chargeback dispute workflow is read-only — we record and display chargebacks but don't support status updates
+- No authentication on the API endpoints. A production service would need operator JWT or API keys.
+- No job queue for polling unresolved payouts. If a webhook is never delivered, a payout stays `submitted` indefinitely.
+- SQLite write throughput has a ceiling. High concurrency would need Postgres with advisory locks.
+- No mobile-money rail yet. Adding it needs a new recipient type and endpoint route but nothing else changes.
+- Chargeback dispute workflow is read-only. Chargebacks are recorded and shown in the timeline but status updates are not supported.
 
 ---
 
 ## Assumptions
 
-- Payout is only permitted on settled orders — if collection fails, no payout is initiated
-- Recipient name mismatch between intent and bank resolution is logged as a warning but does not block the payout — an operator can review the timeline
-- All amounts are in the lowest denomination of the currency (kobo for NGN)
+- Payout is only allowed on settled orders. If collection fails, no payout is initiated.
+- Recipient name mismatch between intent and what the bank returns is logged as a warning but does not block the payout. An operator can review the timeline.
+- All amounts are in the lowest denomination of the currency (kobo for NGN).
