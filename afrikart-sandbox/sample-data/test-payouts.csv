@@ -1,0 +1,51 @@
+test_id,description,type,amount,source_currency,dest_currency,recipient_name,account_number,bank_code,expected_outcome,notes
+TC001,Happy path NGN payout,payout,10000,NGN,NGN,Ada Lovelace,0123456789,058,successful,Standard same-currency payout
+TC002,Happy path GHS payout,payout,5000,GHS,GHS,Akosua Boateng,1002003004,GH001,successful,Ghana payout
+TC003,Happy path KES payout,payout,8000,KES,KES,Amina Wanjiku,5556667778,KE001,successful,Kenya payout
+TC004,Payout to invalid account (ends in 9),payout,5000,NGN,NGN,Fatima Invalid,0000000009,058,failed,Deterministic failure — account ends in 9
+TC005,Payout to slow account (ends in 7),payout,3000,NGN,NGN,Chidi Timeout,1111111117,044,successful,Delayed resolution ~15s — tests timeout handling
+TC006,Zero amount payout,payout,0,NGN,NGN,Ada Lovelace,0123456789,058,validation_error,Should reject with 400
+TC007,Negative amount payout,payout,-500,NGN,NGN,Ada Lovelace,0123456789,058,validation_error,Should reject with 400
+TC008,Missing recipient name,payout,1000,NGN,NGN,,0123456789,058,validation_error,recipient.name required
+TC009,Missing account number,payout,1000,NGN,NGN,Ada Lovelace,,058,validation_error,recipient.accountNumber required
+TC010,Missing bank code,payout,1000,NGN,NGN,Ada Lovelace,0123456789,,validation_error,recipient.bankCode required
+TC011,Unresolvable account number,verification,0,NGN,NGN,Unknown Person,9999999999,058,not_found,Account not in directory
+TC012,Valid account resolution,verification,0,NGN,NGN,Ada Lovelace,0123456789,058,resolved,Should return Ada Lovelace
+TC013,Account name mismatch check,verification,0,NGN,NGN,Wrong Name,0123456789,058,resolved_name_mismatch,Resolves as Ada Lovelace — name doesn't match
+TC014,Happy path checkout NGN,checkout,25000,NGN,,Maya Okafor,,,pending,Creates checkout in pending state
+TC015,Zero amount checkout,checkout,0,NGN,,Maya Okafor,,,validation_error,Should reject
+TC016,Checkout missing customer name,checkout,5000,NGN,,,,,validation_error,customer.name required
+TC017,Checkout missing customer email,checkout,5000,NGN,,Maya Okafor,,,validation_error,customer.email required
+TC018,Duplicate checkout reference,checkout,5000,NGN,,Maya Okafor,,,conflict,Same reference should return 409
+TC019,Collection settle happy path,simulate,25000,NGN,,,,,,Settle after checkout — balance should increase
+TC020,Collection settle — payment not found,simulate,0,NGN,,,,,,not_found,Non-existent reference
+TC021,Cross-currency payout without quote,payout,50000,NGN,GBP,Test User,0123456789,058,validation_error,quoteReference required
+TC022,Cross-currency payout with valid quote,payout,50000,NGN,GBP,Test User,0123456789,058,successful,Must fetch quote first
+TC023,Cross-currency payout with expired quote,payout,50000,NGN,GBP,Test User,0123456789,058,quote_expired,Submit after 5 min TTL
+TC024,Idempotency — same key same payload,payout,10000,NGN,NGN,Ada Lovelace,0123456789,058,idempotent_match,Second request returns cached response
+TC025,Idempotency — same key different payload,payout,20000,NGN,NGN,Kofi Mensah,0001112223,044,idempotent_match,Should return first cached response (not new payout)
+TC026,Insufficient balance payout,payout,999999999,NGN,NGN,Ada Lovelace,0123456789,058,insufficient_funds,Exceeds available balance
+TC027,Webhook signature valid,webhook,0,,,,,,,Verify HMAC-SHA512 matches
+TC028,Webhook signature tampered,webhook,0,,,,,,,Reject — signature doesn't match payload
+TC029,Webhook duplicate delivery,webhook,0,,,,,,,Second delivery should be idempotent
+TC030,Virtual account NGN creation,virtual_account,0,NGN,,Test User,,,approved,NGN accounts auto-approve
+TC031,Virtual account without BVN,virtual_account,0,NGN,,Test User,,,validation_error,NGN requires BVN
+TC032,Virtual account GHS creation,virtual_account,0,GHS,,Test User,,,pending_then_approved,Non-NGN starts pending
+TC033,Virtual account missing email,virtual_account,0,NGN,,Test User,,,validation_error,customer.email required
+TC034,Rate limit exceeded,rate_limit,0,,,,,,,429_response,Send 121+ requests in 60s
+TC035,Chaos mode payout,payout,1000,NGN,NGN,Ada Lovelace,0123456789,058,503_possible,Run with CHAOS_RATE=50
+TC036,Chargeback on successful payment,chargeback,25000,NGN,,,,,,Debit wallet and fire webhook
+TC037,Chargeback on non-existent payment,chargeback,0,NGN,,,,,,not_found,Invalid paymentReference
+TC038,Balance log after payout,balance_log,0,NGN,,,,,debit_logged,Check /wallets/logs shows debit entry
+TC039,Balance log after collection,balance_log,0,NGN,,,,,credit_logged,Check /wallets/logs shows credit entry
+TC040,Balance log after chargeback,balance_log,0,NGN,,,,,debit_logged,Chargeback should appear in logs
+TC041,Balance log after failed payout reversal,balance_log,0,NGN,,,,,credit_logged,Failed payout should log reversal credit
+TC042,BVN resolution valid,bvn,0,,,,,,,resolved,11-digit BVN returns mock data
+TC043,BVN resolution too short,bvn,0,,,,,,,validation_error,BVN must be 11 digits
+TC044,FX quote NGN to GBP,quote,500000,NGN,GBP,,,,quote_generated,Returns rate and 5 min TTL
+TC045,FX quote unsupported pair,quote,1000,NGN,JPY,,,,unsupported_pair,Should return 400
+TC046,Payout large amount boundary,payout,100000000,NGN,NGN,Ada Lovelace,0123456789,058,successful,100M NGN — tests large number handling
+TC047,Concurrent payouts exceeding balance,concurrent,50000000,NGN,NGN,Multiple,varies,058,race_condition,10 simultaneous — check final balance consistency
+TC048,Wallet topup,topup,1000000,NGN,,,,,,Balance increases by amount
+TC049,Health check,health,0,,,,,,,ok,GET /health returns 200
+TC050,Auth with wrong API key,auth,0,,,,,,,401,Should reject with AUTH_FAILED

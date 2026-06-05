@@ -1,0 +1,13 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Build output
+dist/
+build/
+*.js.map
+!jest.config.js
+
+# Environment files
+.env
