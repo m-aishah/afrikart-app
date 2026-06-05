@@ -52,67 +52,94 @@ This service handles all of that. It sits between AfriKart's business logic and 
 
 ## Running the Service
 
-### Option 1 - Local (recommended)
+### Prerequisites
 
-**Terminal 1 - Start the Fincra sandbox:**
+**Local:**
+
+- Node.js 22+
+- npm
+
+**Docker:**
+
+- Docker and Docker Compose
+
+---
+
+### Step 1 - Get the code
 
 ```bash
-cd afrikart-sandbox
-bun install
-WEBHOOK_TARGET_URL=http://localhost:3001/webhooks/fincra bun run start
+git clone https://github.com/m-aishah/afrikart-app.git
+cd afrikart-app
 ```
 
-Sandbox runs on `http://localhost:4000`.
+---
 
-**Terminal 2 - Start our service:**
+### Step 2 - Set up credentials
 
 ```bash
 cp .env.example .env
+```
+
+Open `.env` and update these four values:
+FINCRA_API_BASE_URL=https://your-sandbox-url
+FINCRA_SECRET_KEY=your-secret-key
+FINCRA_PUBLIC_KEY=your-public-key
+FINCRA_WEBHOOK_SECRET=your-webhook-secret
+
+---
+
+### Step 3 - Run
+
+**Option A - Docker (simplest):**
+
+```bash
+docker compose up --build
+```
+
+Service runs on `http://localhost:3000`.
+
+**Option B - Local:**
+
+```bash
 npm install --ignore-scripts
 npm run dev
 ```
 
 Service runs on `http://localhost:3001`.
 
-**Verify both are running:**
+---
+
+### Step 4 - Verify it is running
 
 ```bash
-curl http://localhost:4000/health
+curl http://localhost:3000/health
+```
+
+or if running locally:
+
+```bash
 curl http://localhost:3001/health
 ```
 
+Should return:
+
+```json
+{
+  "status": "ok",
+  "service": "afrikart-payment-service",
+  "version": "1.0.0",
+  "db": "ok"
+}
+```
+
 ---
 
-### Option 2 - Docker
-
-The sandbox needs to be running separately. Then:
+### Running tests
 
 ```bash
-FINCRA_API_BASE_URL=http://your-sandbox-url docker compose up --build
+npm install --ignore-scripts
+npm test
 ```
-
-Service runs on `http://localhost:3000`.
-
----
-
-### Option 3 - Hosted judging sandbox
-
-Update `.env` with the credentials provided:
-
-```bash
-FINCRA_API_BASE_URL=https://hosted-sandbox-url-from-fincra.com
-FINCRA_SECRET_KEY=your-assigned-key
-FINCRA_PUBLIC_KEY=your-assigned-public-key
-FINCRA_WEBHOOK_SECRET=your-assigned-webhook-secret
-```
-
-Then run:
-
-```bash
-npm run dev
-```
-
-No code changes needed. Everything is configurable via environment variables.
 
 ---
 
